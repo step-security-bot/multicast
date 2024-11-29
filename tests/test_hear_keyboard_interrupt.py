@@ -41,6 +41,7 @@ try:
 		raise ImportError("[CWE-758] Failed to import context") from None
 	else:
 		from context import sys
+		from context import multicast
 		from context import unittest
 		from context import subprocess
 		import signal
@@ -59,6 +60,41 @@ class TestHearKeyboardInterrupt(BasicUsageTestSuite):
 	with the expected status code (130).
 	"""
 	__module__ = """tests.test_hear_keyboard_interrupt"""
+
+	@staticmethod
+	def wait_for_server(process, timeout=5):
+		"""
+		Waits for the server process to start by monitoring its output.
+
+		This function continuously reads the standard output of the given server process
+		to detect when the server has successfully started. It checks for a specific output
+		line indicating that the server is running. If the server starts within the specified
+		timeout period, the function returns `True`. If the process exits before the server
+		starts, a `RuntimeError` is raised. If the timeout is reached before the server starts,
+		a `TimeoutError` is raised.
+
+		Args:
+			process (subprocess.Popen): The server process whose output is being monitored.
+			timeout (float, optional): The maximum number of seconds to wait for the server to
+				start. Defaults to 5.
+
+		Returns:
+			bool: `True` if the server started successfully within the timeout period.
+
+		Raises:
+			CommandExecutionError: If the server process exits before the server starts.
+			TimeoutError: If the server does not start within the specified timeout period.
+
+		"""
+		start_time = time.time()
+		while time.time() - start_time < timeout:
+			if process.poll() is not None:
+				raise multicast.exceptions.CommandExecutionError("Server failed to start", 69)
+			line = process.stdout.readline()
+			if "server_activate" in line:  # Adjust based on actual server output
+				return True
+			time.sleep(0.1)
+		raise TimeoutError("Server failed to start within timeout")
 
 	def test_hear_keyboard_interrupt(self):
 		"""Tests the special hear and stop test"""
@@ -84,7 +120,7 @@ class TestHearKeyboardInterrupt(BasicUsageTestSuite):
 				text=True
 			)
 			try:
-				time.sleep(1)  # Allow server to start
+				self.wait_for_server(process, 1)  # Allow server to start
 				process.send_signal(signal.SIGINT)
 				stdout, stderr = process.communicate(timeout=5)
 				self.assertIsNotNone(stdout, "Incomplete Test.")
