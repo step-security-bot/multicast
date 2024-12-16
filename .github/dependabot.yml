@@ -138,3 +138,18 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /docs
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /tests
+    schedule:
+      interval: daily
